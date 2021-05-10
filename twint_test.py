@@ -21,7 +21,7 @@ def parse_args():
 
     parser.add_argument("--partition",
     										nargs=2,
-                        help="Used when distributing all-search across multiple systems '{num_divisions}, {your division}'")
+                        help="Used when distributing all-search across multiple systems. Format: '{num_divisions} {your division}', ex. --partition 5 2")
 
 
     parser.add_argument("--dont_search_bodytext",
@@ -31,6 +31,14 @@ def parse_args():
     parser.add_argument("-m", "--max_results",
     										default = 10000,
                         help="The maximum number of tweets to return for given hashtag")
+
+    parser.add_argument("--tweet_dir",
+    										default = "tweets",
+                        help="Directory to store all tweets to do analysis upon. Default 'tweets/'")
+
+    parser.add_argument("-o", "--out_dir",
+    										default = "results",
+                        help="Directory to store results. Default 'results/'")
 
     args = parser.parse_args()
     return args
@@ -45,7 +53,7 @@ def search_and_store(query, num_tweets = 10000, english_only = True):
 	c.Store_csv = True
 	c.Limit = num_tweets
 	c.Popular_tweets = True
-	c.Output = "tweets/" + query + ".csv"
+	c.Output = os.path.join(args.tweet_dir, query + ".csv")
 	c.Show_hashtags = True
 	c.Hide_output = True
 
@@ -101,9 +109,9 @@ def query_cycle(species, max_results = 10000):
 	print(f"Looking up {species}...")
 	query = hashify(species)
 
-	if not os.path.exists("tweets/" + query + ".csv"): search_and_store(query, num_tweets = max_results)
+	if not os.path.exists(os.path.join(args.tweet_dir + query + ".csv")): search_and_store(query, num_tweets = max_results)
 	try:
-		tweets = pd.read_csv("tweets/" + query + ".csv")
+		tweets = pd.read_csv(os.path.join(args.tweet_dir, query + ".csv"))
 	except FileNotFoundError:
 		print("Probably no tweets found for given species :( Returning...")
 		return
@@ -134,7 +142,7 @@ def query_cycle(species, max_results = 10000):
 
 	print(hits)
 
-	with open("results/" + query + "_results.json", "w") as f:
+	with open(os.path.join(args.out_dir, query + "_results.json"), "w") as f:
 		json.dump(hits, f, indent=4)
 
 
@@ -142,7 +150,7 @@ def main():
 	global args 
 	args = parse_args()
 
-	args.query = "Clown knifefish"
+	#args.query = "Clown knifefish"
 	args.all = True
 	args.partition = [5,2]
 	if args.all:
