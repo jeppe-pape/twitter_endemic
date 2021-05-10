@@ -2,6 +2,8 @@ import os
 import json
 import sys
 import argparse
+import re
+import math
 
 import twint
 import pandas as pd
@@ -17,14 +19,18 @@ def parse_args():
     										action="store_true",
                         help="Flag for processing all endemic species (from specific_names.json file")
 
+    parser.add_argument("--partition",
+    										nargs=2,
+                        help="Used when distributing all-search across multiple systems '{num_divisions}, {your division}'")
+
+
     parser.add_argument("--dont_search_bodytext",
     										action="store_false",
                         help="Flag for searching just the hashtag ('#bluefinshark') and NOT the full species name ('Bluefin Shark')")
 
     parser.add_argument("-m", "--max_results",
     										default = 10000,
-                        help="The maximum number of tweets to return")
-
+                        help="The maximum number of tweets to return for given hashtag")
 
     args = parser.parse_args()
     return args
@@ -38,6 +44,7 @@ def search_and_store(query, num_tweets = 10000, english_only = True):
 	if english_only: c.Lang = "en"
 	c.Store_csv = True
 	c.Limit = num_tweets
+	c.Popular_tweets = True
 	c.Output = "tweets/" + query + ".csv"
 	c.Show_hashtags = True
 	c.Hide_output = True
@@ -90,30 +97,33 @@ def get_specific_names(removes = []):
 	return names	
 
 
-def query_cycle(query, max_results = 10000):
-	print(f"Looking up {query}...")
-	query = hashify(query)
+def query_cycle(species, max_results = 10000):
+	print(f"Looking up {species}...")
+	query = hashify(species)
 
 	if not os.path.exists("tweets/" + query + ".csv"): search_and_store(query, num_tweets = max_results)
 	try:
 		tweets = pd.read_csv("tweets/" + query + ".csv")
 	except FileNotFoundError:
-		print("Probably no results found for given species :( Returning...")
+		print("Probably no tweets found for given species :( Returning...")
 		return
 
-	names = get_specific_names(removes = [query])
+	names = get_specific_names(removes = [species]) #Import endemic species list and remove itself
 
 
 
 	l_tweets = list(tweets.loc[tweets["language"] == "en", "tweet"])
 	hits = {}
 	for i, t in enumerate(l_tweets):
+		#t = re.split("; |, | |\"", t)
+
 		hit_species = []
 
 		for n in names:
 			if not args.dont_search_bodytext:
 				if (n in t) or (hashify(n.lower()) in t.lower()):
 					hit_species.append(n)
+
 			else:
 				if hashify(n.lower()) in t.lower():
 					hit_species.append(n)				
@@ -132,8 +142,21 @@ def main():
 	global args 
 	args = parse_args()
 
+	args.query = "Clown knifefish"
+	args.all = True
+	args.partition = [5,2]
 	if args.all:
-		for species_name in get_specific_names():
+		ns = get_specific_names()
+
+		if args.partition is not None:
+			assert args.partition[1] < args.partition [0], "Partition index must be lower than number of divisions"
+			binsize = math.ceil(len(ns) / args.partition[0])
+			start = binsize * args.partition[1]
+
+
+			for species_name in ns[start:start+binsize]:
+				query_cycle(species_name, max_results	= args.max_results)	
+		for species_name in ns:
 			query_cycle(species_name, max_results	= args.max_results)		
 
 	else:
