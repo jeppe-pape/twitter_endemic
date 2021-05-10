@@ -20,6 +20,7 @@ def parse_args():
                         help="Flag for processing all endemic species (from specific_names.json file")
 
     parser.add_argument("--partition",
+    										type=int,
     										nargs=2,
                         help="Used when distributing all-search across multiple systems. Format: '{num_divisions} {your division}', ex. --partition 5 2")
 
