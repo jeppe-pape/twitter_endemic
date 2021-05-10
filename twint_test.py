@@ -151,8 +151,8 @@ def main():
 	args = parse_args()
 
 	#args.query = "Clown knifefish"
-	args.all = True
-	args.partition = [5,2]
+	#args.all = True
+	#args.partition = [5,2]
 	if args.all:
 		ns = get_specific_names()
 
