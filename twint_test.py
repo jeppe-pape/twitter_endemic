@@ -56,7 +56,7 @@ def search_and_store(query, num_tweets = 10000, english_only = True):
 	c.Popular_tweets = True
 	c.Output = os.path.join(args.tweet_dir, query + ".csv")
 	c.Show_hashtags = True
-	c.Hide_output = True
+	#c.Hide_output = True
 
 	twint.run.Search(c)
 
