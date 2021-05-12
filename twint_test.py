@@ -33,6 +33,9 @@ def parse_args():
     										action="store_true",
                         help="Flag if you want to overwrite the existing results")
 
+    parser.add_argument("--verbose",
+    										action="store_true",
+                        help="Flag if you want to print all incoming tweets")
 
     parser.add_argument("-m", "--max_results",
     										default = 10000,
@@ -61,7 +64,7 @@ def search_and_store(query, num_tweets = 10000, english_only = True):
 	c.Popular_tweets = True
 	c.Output = os.path.join(args.tweet_dir, query + ".csv")
 	c.Show_hashtags = True
-	#c.Hide_output = True
+	c.Hide_output = not args.verbose
 
 	twint.run.Search(c)
 
@@ -117,7 +120,6 @@ def query_cycle(species, max_results = 10000):
 	query = hashify(species)
 
 	# Skip if results already loaded (except overwrite)
-	print(os.path.join(args.out_dir, query + "_results.json"))
 	if os.path.exists(os.path.join(args.out_dir, query + "_results.json")):
 
 		if not args.overwrite:
@@ -126,6 +128,7 @@ def query_cycle(species, max_results = 10000):
 
 	# If no tweets collected, collect tweets
 	if not os.path.exists(os.path.join(args.tweet_dir + query + ".csv")):
+		print(f"Getting tweets for {species}... This can take a while")
 		search_and_store(query, num_tweets = max_results)
 
 	#Load tweets into dataframe
