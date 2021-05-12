@@ -29,6 +29,11 @@ def parse_args():
     										action="store_false",
                         help="Flag for searching just the hashtag ('#bluefinshark') and NOT the full species name ('Bluefin Shark')")
 
+    parser.add_argument("--overwrite",
+    										action="store_true",
+                        help="Flag if you want to overwrite the existing results")
+
+
     parser.add_argument("-m", "--max_results",
     										default = 10000,
                         help="The maximum number of tweets to return for given hashtag")
@@ -108,16 +113,30 @@ def get_specific_names(removes = []):
 
 def query_cycle(species, max_results = 10000):
 	print(f"Looking up {species}...")
+
 	query = hashify(species)
 
-	if not os.path.exists(os.path.join(args.tweet_dir + query + ".csv")): search_and_store(query, num_tweets = max_results)
+	# Skip if results already loaded (except overwrite)
+	print(os.path.join(args.out_dir, query + "_results.json"))
+	if os.path.exists(os.path.join(args.out_dir, query + "_results.json")):
+
+		if not args.overwrite:
+			print(f"Results for {species} already found.. Skipping (pass --overwrite to overwrite)")
+			return
+
+	# If no tweets collected, collect tweets
+	if not os.path.exists(os.path.join(args.tweet_dir + query + ".csv")):
+		search_and_store(query, num_tweets = max_results)
+
+	#Load tweets into dataframe
 	try:
 		tweets = pd.read_csv(os.path.join(args.tweet_dir, query + ".csv"))
 	except FileNotFoundError:
 		print("Probably no tweets found for given species :( Returning...")
 		return
 
-	names = get_specific_names(removes = [species]) #Import endemic species list and remove itself
+	#Import endemic species list and remove itself
+	names = get_specific_names(removes = [species]) 
 
 
 
@@ -129,11 +148,12 @@ def query_cycle(species, max_results = 10000):
 		hit_species = []
 
 		for n in names:
-			if not args.dont_search_bodytext:
+			if args.dont_search_bodytext:
 				if (n in t) or (hashify(n.lower()) in t.lower()):
 					hit_species.append(n)
 
 			else:
+				print("Second")
 				if hashify(n.lower()) in t.lower():
 					hit_species.append(n)				
 
@@ -152,23 +172,30 @@ def main():
 	args = parse_args()
 
 	#args.query = "Clown knifefish"
-	#args.all = True
-	#args.partition = [5,2]
+	args.all = True
+	args.partition = [5,2]
+
+	#Go through all species
 	if args.all:
 		ns = get_specific_names()
 
 		if args.partition is not None:
 			assert args.partition[1] < args.partition [0], "Partition index must be lower than number of divisions"
+			
 			binsize = math.ceil(len(ns) / args.partition[0])
 			start = binsize * args.partition[1]
 
 
 			for species_name in ns[start:start+binsize]:
-				query_cycle(species_name, max_results	= args.max_results)	
+				query_cycle(species_name, max_results	= args.max_results)
+
 		for species_name in ns:
 			query_cycle(species_name, max_results	= args.max_results)		
 
+
+	#Only go through given species
 	else:
+
 		assert args.query is not None, "Error - empty query"
 		query_cycle(args.query, max_results	= args.max_results)
 
