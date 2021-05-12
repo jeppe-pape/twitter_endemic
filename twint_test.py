@@ -175,8 +175,8 @@ def main():
 	args = parse_args()
 
 	#args.query = "Clown knifefish"
-	args.all = True
-	args.partition = [5,2]
+	#args.all = True
+	#args.partition = [5,2]
 
 	#Go through all species
 	if args.all:
